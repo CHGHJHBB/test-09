@@ -4,11 +4,11 @@ services:
     env: python
     region: oregon                   # Région Oregon (US West)
     plan: free                        # Choisis le plan que tu veux
-    pythonVersion: 3.13.4             # Version Python exacte
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app
+    pythonVersion: "3.12"             # Version Python exacte
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app"
     envVars:
       - key: CHAT_ID
-        value: 7664721918
+        value: "7664721918"
       - key: TELEGRAM_BOT_TOKEN
-        value: 7563042432:AAGl7upiQiU3Gohr6HUPennLkC_P5kba2go
+        value: "7563042432:AAGl7upiQiU3Gohr6HUPennLkC_P5kba2go"
