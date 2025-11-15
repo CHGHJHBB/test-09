@@ -1,88 +1,42 @@
-import os
+import json
 import requests
-import psycopg2
-from flask import Flask, request
 
-app = Flask(__name__)
+# Config Telegram
+TOKEN = "TON_BOT_TOKEN_ICI"
+CHAT_ID = "TON_CHAT_ID_ICI"
 
-# --- Variables d'environnement ---
-DATABASE_URL = os.getenv("DATABASE_URL")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# Fichier local pour stocker les derniers ELO
+LAST_ELO_FILE = "last_elo.json"
 
-# --- Récupération des données depuis l'API ---
-def get_data():
-    resp = requests.get("https://api.worldguessr.com/api/leaderboard")
-    resp.raise_for_status()
-    data = resp.json().get("leaderboard", [])
-    print("DATA FROM API:", data)   # 👈 ajoute ceci
-    return data
+# Charger les derniers ELO depuis le fichier
+try:
+    with open(LAST_ELO_FILE, "r") as f:
+        last_elo = json.load(f)
+except FileNotFoundError:
+    last_elo = {}
 
-# --- Comparaison et mise à jour ---
-def compare_and_update(new_data):
-    conn = psycopg2.connect(DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS players (
-            username TEXT PRIMARY KEY,
-            elo INTEGER
-        )
-    """)
-    conn.commit()
+# --- Récupération des joueurs depuis ton API ---
+# Remplace cette partie par ton appel réel à l'API ou DB
+# Exemple fictif :
+players = [
+    {"username": "Alice", "elo": 1200},
+    {"username": "Bob", "elo": 1250},
+]
 
-    for player in new_data:
-        name = player["username"]
-        elo = player["elo"]
+# Comparer les ELO et notifier Telegram si changement
+for player in players:
+    username = player["username"]
+    elo = player["elo"]
 
-        if elo < 8000:
-            continue
+    if username not in last_elo or last_elo[username] != elo:
+        # Envoyer message Telegram
+        requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={
+            "chat_id": CHAT_ID,
+            "text": f"{username} a maintenant {elo} ELO !"
+        })
+        # Mettre à jour le fichier
+        last_elo[username] = elo
 
-        cur.execute("SELECT elo FROM players WHERE username = %s", (name,))
-        result = cur.fetchone()
-
-        if result:
-            old_elo = result[0]
-            if old_elo != elo:
-                cur.execute("UPDATE players SET elo = %s WHERE username = %s", (elo, name))
-                conn.commit()
-                msg = f"🔔 {name} a changé d’ELO : {old_elo} → {elo}"
-                if elo >= 10000:
-                    msg = f"⚡ {name} dépasse les 10 000 ELO ! ({old_elo} → {elo})"
-                requests.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-                    json={"chat_id": TELEGRAM_CHAT_ID, "text": msg}
-                )
-        else:
-            cur.execute("INSERT INTO players (username, elo) VALUES (%s, %s)", (name, elo))
-            conn.commit()
-            if elo >= 8000:
-                msg = f"🆕 Nouveau joueur au-dessus de 8000 ELO : {name} ({elo})"
-                requests.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-                    json={"chat_id": TELEGRAM_CHAT_ID, "text": msg}
-                )
-
-    cur.close()
-    conn.close()
-
-# --- Route principale ---
-@app.route("/", methods=["GET", "HEAD"])
-def home():
-    return "✅ WorldGuessr Tracker is running!", 200
-
-# --- Route de vérification ---
-@app.route("/check", methods=["GET", "HEAD"])
-def check():
-    print(f"🔁 Triggered by {request.method} /check")
-    try:
-        compare_and_update(get_data())
-        print("✅ Check completed successfully.")
-        return "✅ Check completed", 200
-    except Exception as e:
-        print(f"❌ Error during check: {e}")
-        return f"❌ Error: {e}", 500
-
-# --- Lancement du serveur ---
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# Sauvegarder les ELO pour la prochaine vérification
+with open(LAST_ELO_FILE, "w") as f:
+    json.dump(last_elo, f)
