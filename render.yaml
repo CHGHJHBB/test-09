@@ -2,16 +2,12 @@ services:
   - type: web
     name: worldguessr-tracker
     env: python
-    region: oregon
-    plan: free
-    pythonVersion: "3.12"
-    buildCommand: >
-      python -m venv .venv && 
-      .venv/bin/pip install --upgrade pip && 
-      .venv/bin/pip install -r requirements.txt
-    startCommand: ".venv/bin/gunicorn main:app"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
     envVars:
-      - key: CHAT_ID
-        value: "7664721918"
-      - key: TELEGRAM_BOT_TOKEN
-        value: "7563042432:AAGl7upiQiU3Gohr6HUPennLkC_P5kba2go"
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
