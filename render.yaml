@@ -9,6 +9,6 @@ services:
     startCommand: "gunicorn main:app"
     envVars:
       - key: CHAT_ID
-        value: "<TON_CHAT_ID_ICI>"
+        value: 7664721918
       - key: TELEGRAM_BOT_TOKEN
-        value: "<TON_TELEGRAM_BOT_TOKEN_ICI>"
+        value: 7563042432:AAGl7upiQiU3Gohr6HUPennLkC_P5kba2go
