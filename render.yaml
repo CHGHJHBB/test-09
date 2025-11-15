@@ -5,8 +5,8 @@ services:
     region: oregon                   # Région Oregon (US West)
     plan: free                        # Choisis le plan que tu veux
     pythonVersion: 3.13.4             # Version Python exacte
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn main:app"
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
     envVars:
       - key: CHAT_ID
         value: 7664721918
