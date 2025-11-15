@@ -5,9 +5,9 @@ services:
     region: oregon
     plan: free
     pythonVersion: "3.12"
-    buildCommand: |
-      python -m venv .venv
-      .venv/bin/pip install --upgrade pip
+    buildCommand: >
+      python -m venv .venv && 
+      .venv/bin/pip install --upgrade pip && 
       .venv/bin/pip install -r requirements.txt
     startCommand: ".venv/bin/gunicorn main:app"
     envVars:
