@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: worldguessr-tracker
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app"
+    envVars:
+      - key: CHAT_ID
+        value: "<TON_CHAT_ID_ICI>"
+      - key: TELEGRAM_BOT_TOKEN
+        value: "<TON_BOT_TOKEN_ICI>"
