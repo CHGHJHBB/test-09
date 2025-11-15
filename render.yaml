@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: worldguessr-tracker        # Nom de ton service sur Render
+    name: worldguessr-tracker       # Nom de ton service sur Render
     env: python
-    region: oregon                   # Région Oregon (US West)
-    plan: free                        # Choisis le plan que tu veux
-    pythonVersion: "3.12"             # Version Python exacte
-    buildCommand: "python -m pip install --upgrade pip && pip install -r requirements.txt"
+    region: oregon                  # Région Oregon (US West)
+    plan: free                       # Choisis le plan que tu veux
+    pythonVersion: "3.12"            # Version Python exacte
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn main:app"
     envVars:
       - key: CHAT_ID
