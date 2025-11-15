@@ -14,7 +14,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 def get_data():
     resp = requests.get("https://api.worldguessr.com/api/leaderboard")
     resp.raise_for_status()
-    return resp.json().get("leaderboard", [])
+    data = resp.json().get("leaderboard", [])
+    print("DATA FROM API:", data)   # 👈 ajoute ceci
+    return data
 
 # --- Comparaison et mise à jour ---
 def compare_and_update(new_data):
