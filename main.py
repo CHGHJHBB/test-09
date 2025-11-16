@@ -1,97 +1,77 @@
-import os
-import requests
-import psycopg2
 from flask import Flask, request
+import requests
+import os
+import json
 
 app = Flask(__name__)
 
-# --- Variables d’environnement ---
-DATABASE_URL = os.getenv("DATABASE_URL")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# --- Config Telegram ---
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-API_URL = "https://api.worldguessr.com/api/leaderboard"
+# --- Fichier local pour stocker les anciens ELO ---
+LAST_ELO_FILE = "last_elo.json"
 
+# Charger les ELO sauvegardés
+def load_last_elo():
+    try:
+        with open(LAST_ELO_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
 
-# --- Récupération des données depuis l’API ---
-def get_data():
-    resp = requests.get(API_URL)
-    resp.raise_for_status()
-    return resp.json().get("leaderboard", [])
+# Sauvegarder les ELO
+def save_last_elo(data):
+    with open(LAST_ELO_FILE, "w") as f:
+        json.dump(data, f)
 
-
-# --- Comparaison en base ---
-def compare_and_update(players):
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    cur = conn.cursor()
-
-    # création de table si n’existe pas
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS players (
-            username TEXT PRIMARY KEY,
-            elo INTEGER
-        )
-    """)
-    conn.commit()
-
-    for p in players:
-        name = p["username"]
-        elo = p["elo"]
-
-        # On ignore les joueurs < 8000
-        if elo < 8000:
-            continue
-
-        cur.execute("SELECT elo FROM players WHERE username = %s", (name,))
-        row = cur.fetchone()
-
-        if row is None:
-            # nouveau joueur
-            cur.execute("INSERT INTO players (username, elo) VALUES (%s, %s)", (name, elo))
-            conn.commit()
-            msg = f"🆕 Nouveau joueur >8000 ELO : {name} ({elo})"
-            send_telegram(msg)
-
-        else:
-            old_elo = row[0]
-            if old_elo != elo:
-                # changement d’ELO
-                cur.execute("UPDATE players SET elo = %s WHERE username = %s", (elo, name))
-                conn.commit()
-
-                msg = f"🔔 {name} a changé d’ELO : {old_elo} → {elo}"
-                send_telegram(msg)
-
-    cur.close()
-    conn.close()
-
-
-# --- Envoi Telegram ---
+# Envoyer un message Telegram
 def send_telegram(text):
     requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        json={"chat_id": TELEGRAM_CHAT_ID, "text": text}
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": text}
     )
 
-
-# --- Route UptimeRobot (avec HEAD supporté) ---
+# --- Route "ping" pour Render / UptimeRobot ---
 @app.route("/", methods=["GET", "HEAD"])
 def home():
+    return "OK", 200
+
+# --- Route de test pour Telegram ---
+@app.route("/test", methods=["GET", "HEAD"])
+def test_message():
     if request.method == "HEAD":
         return "", 200
-    return "✅ WorldGuessr Tracker is running!", 200
+    send_telegram("🧪 Test : la connexion Telegram fonctionne !")
+    return "Message test envoyé !", 200
 
-
-# --- Route check (ping par UptimeRobot toutes les 5 min) ---
+# --- Exemple de vérification d’ELO ---
 @app.route("/check", methods=["GET", "HEAD"])
-def check():
+def check_elo():
     if request.method == "HEAD":
         return "", 200
-    compare_and_update(get_data())
-    return "✅ Check executed", 200
+
+    # Exemple de données (à remplacer par ton API réelle)
+    players = [
+        {"username": "Alice", "elo": 1200},
+        {"username": "Bob", "elo": 1250},
+    ]
+
+    last_elo = load_last_elo()
+
+    for p in players:
+        username = p["username"]
+        elo = p["elo"]
+
+        if username not in last_elo or last_elo[username] != elo:
+            send_telegram(f"{username} a maintenant {elo} ELO !")
+            last_elo[username] = elo
+
+    save_last_elo(last_elo)
+
+    return "Check ELO done", 200
 
 
-# --- Lancement serveur ---
+# --- Lancement ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
